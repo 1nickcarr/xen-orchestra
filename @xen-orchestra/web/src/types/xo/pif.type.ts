@@ -18,6 +18,7 @@ export type XoPif = {
   mode: string
   mtu: string
   netmask: string
+  physical: boolean
   speed: number
   vlan: number
 }
