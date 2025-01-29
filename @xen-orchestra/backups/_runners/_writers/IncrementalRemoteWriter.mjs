@@ -223,13 +223,12 @@ export class IncrementalRemoteWriter extends MixinRemoteWriter(AbstractIncrement
       vmSnapshot,
       vtpms: deltaExport.vtpms,
     }
-
+    let size = 0
     await Task.run({ name: 'transfer' }, async () => {
       await asyncEach(
         Object.keys(deltaExport.vdis),
         async id => {
           const path = `${this._vmBackupDir}/${vhds[id]}`
-
           await adapter.writeVhd(path, deltaExport.disks[`${id}.vhd`], {
             // no checksum for VHDs, because they will be invalidated by
             // merges and chainings
@@ -237,13 +236,14 @@ export class IncrementalRemoteWriter extends MixinRemoteWriter(AbstractIncrement
             validator: tmpPath => checkVhd(handler, tmpPath),
             writeBlockConcurrency: this._config.writeBlockConcurrency,
           })
+          size = size + deltaExport.disks[`${id}.vhd`].generatedDiskBlocks * 2 * 1024 * 1024
         },
         {
           concurrency: settings.diskPerVmConcurrency,
         }
       )
 
-      return { size: 0 }
+      return { size }
     })
     metadataContent.size = 0 /* todo */
     this._metadataFileName = await adapter.writeVmBackupMetadata(vm.uuid, metadataContent)
