@@ -129,10 +129,27 @@ export async function checkAliases(
         logWarn('missing target of alias', { alias })
         if (remove) {
           logInfo('removing alias and non VHD target', { alias, target })
-          await handler.unlink(target)
           await handler.unlink(alias)
         }
+        continue
       }
+      if (err.code === 'EISDIR') {
+        logWarn('alias is a vhd directory', { alias })
+        if (remove) {
+          logInfo('removing vhd directory named as alias', { alias, target })
+          await VhdAbstract.unlink(handler, alias)
+        }
+        continue
+      }
+    }
+
+    if (target === '') {
+      logWarn('empty target for alias ', { alias })
+      if (remove) {
+        logInfo('removing alias and non VHD target', { alias, target })
+        await handler.unlink(alias)
+      }
+      continue
     }
 
     if (!isVhdFile(target)) {
