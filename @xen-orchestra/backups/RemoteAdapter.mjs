@@ -1,9 +1,8 @@
 import { asyncEach } from '@vates/async-each'
 import { asyncMap, asyncMapSettled } from '@xen-orchestra/async-map'
-import { writeVhdFileToRemote } from '@xen-orchestra/disk-transform/src/to/VhdRemote.mts'
 import { compose } from '@vates/compose'
 import { createLogger } from '@xen-orchestra/log'
-import { openVhd, VhdAbstract, VhdDirectory, VhdSynthetic } from 'vhd-lib'
+import { openVhd, VhdDirectory, VhdSynthetic } from 'vhd-lib'
 import { decorateMethodsWith } from '@vates/decorate-with'
 import { deduped } from '@vates/disposable/deduped.js'
 import { dirname, join, resolve } from 'node:path'
@@ -11,7 +10,6 @@ import { execFile } from 'child_process'
 import { mount } from '@vates/fuse-vhd'
 import { readdir, lstat } from 'node:fs/promises'
 import { synchronized } from 'decorator-synchronized'
-import { v4 as uuidv4 } from 'uuid'
 import { ZipFile } from 'yazl'
 import Disposable from 'promise-toolbox/Disposable'
 import fromCallback from 'promise-toolbox/fromCallback'
@@ -32,6 +30,9 @@ import { isValidXva } from './_isValidXva.mjs'
 import { listPartitions, LVM_PARTITION_TYPE } from './_listPartitions.mjs'
 import { lvs, pvs } from './_lvm.mjs'
 import { watchStreamSize } from './_watchStreamSize.mjs'
+
+import { VhdStream } from '@xen-orchestra/disk-transform/src/consumer/VhdStream.mts'
+import { VhdDirectoryRemote } from '@xen-orchestra/disk-transform/src/consumer/VhdDirectory.mts'
 
 export const DIR_XO_CONFIG_BACKUPS = 'xo-config-backups'
 
@@ -684,15 +685,29 @@ export class RemoteAdapter {
 
   async writeVhd(path, disk, { checksum = true, validator = noop, writeBlockConcurrency } = {}) {
     const handler = this._handler
-    const dataPath = this.useVhdDirectory() ? `${dirname(path)}/data/${uuidv4()}.vhd` : path
-    await writeVhdFileToRemote(handler, dataPath, disk, { writeBlockConcurrency })
-    await validator(dataPath)
+
     if (this.useVhdDirectory()) {
-      await VhdAbstract.createAlias(handler, path, dataPath)
+      const writer = new VhdDirectoryRemote(disk, {
+        handler,
+        path,
+        concurrency: writeBlockConcurrency,
+        validator,
+        compression: 'brotli',
+      })
+      await writer.write()
+    } else {
+      const writer = new VhdStream(disk)
+      const stream = writer.toStream()
+      await this.outputStream(path, stream, { validator })
+      await validator(path)
     }
   }
 
-  async outputStream(path, input, { checksum = true, maxStreamLength, streamLength, validator = noop } = {}) {
+  async outputStream(
+    path,
+    input,
+    { checksum = true, maxStreamLength, streamLength = input.length, validator = noop } = {}
+  ) {
     const container = watchStreamSize(input)
     await this._handler.outputStream(path, input, {
       checksum,

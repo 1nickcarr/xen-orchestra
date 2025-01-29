@@ -39,8 +39,7 @@ export const IncrementalXapi = class IncrementalXapiVmBackupRunner extends Abstr
 
     const isVhdDifferencing = {}
 
-    // @todo : reimplement fork, throttle, validation,isVhdDifferencingDis , nbd use and size computation
-    // @todo : wrap the genration and transfer in a Disposable.factory to handle error case an resource cleanup
+    // @todo : reimplement fork, throttle, validation,isVhdDifferencingDisk , nbd use
     const timestamp = Date.now()
 
     await this._callWriters(
