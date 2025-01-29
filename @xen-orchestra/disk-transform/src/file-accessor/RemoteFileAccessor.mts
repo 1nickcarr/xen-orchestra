@@ -11,4 +11,5 @@ export class RemoteFileAccessor extends FileAccessor {
   writeFile: (path: string, data: Buffer | string) => Promise<Buffer>
   rename: (from: string, to: string) => Promise<void>
   unlink: (path: string) => Promise<void>
+  mktree: (path: string) => Promise<void>
 }
