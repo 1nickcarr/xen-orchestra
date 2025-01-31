@@ -143,13 +143,13 @@
       <UiCardTitle>{{ $t('network-information') }}</UiCardTitle>
       <div class="content">
         <!-- IP ADDRESSES -->
-        <VtsCardRowKeyValue>
-          <template #key>
+        <VtsCardRowKeyValue v-for="ip in allIps" :key="ip">
+          <template v-if="allIps[0] === ip" #key>
             {{ $t('ip-addresses') }}
           </template>
           <template #value>
             <div class="ip-adresses">
-              <div v-tooltip class="text-ellipsis">{{ ipAddress }}</div>
+              <div v-tooltip class="text-ellipsis">{{ ip }}</div>
             </div>
           </template>
           <template #addons>
@@ -161,7 +161,7 @@
               accent="info"
               @click="copy(pif.ip)"
             />
-            <MenuList placement="bottom-end">
+            <MenuList v-if="allIps[0] === ip" placement="bottom-end">
               <template #trigger="{ isOpen, open }">
                 <UiButtonIcon
                   v-if="allIps.length > 1"
@@ -177,21 +177,6 @@
                 <div>{{ t('copy-all') }}</div>
               </MenuItem>
             </MenuList>
-          </template>
-        </VtsCardRowKeyValue>
-        <VtsCardRowKeyValue v-for="ipv6 in ipV6Address" :key="ipv6">
-          <template v-if="allIps.length > 1" #value>
-            {{ ipv6 }}
-          </template>
-          <template v-if="allIps.length > 1" #addons>
-            <UiButtonIcon
-              v-tooltip="copied && $t('core.copied')"
-              class="ip-address"
-              :icon="faCopy"
-              size="medium"
-              accent="info"
-              @click="copy(ipv6)"
-            />
           </template>
         </VtsCardRowKeyValue>
         <!-- MAC ADDRESSES -->
@@ -369,18 +354,19 @@ const network = computed(() => (pif.value ? get(pif.value.$network) : undefined)
 
 const allIps = computed(() => {
   if (!pif.value) return []
+  // pif.value.ipv6.push('192.168.0.1', '192.168.0.1', '192.168.0.1', '192.168.0.1', '192.168.0.1', '192.168.0.1')
   const ips = [pif.value.ip, ...pif.value.ipv6].filter(ip => ip)
   return ips.length > 0 ? ips : ['-']
 })
 
 const networkNameLabel = computed(() => network.value?.name_label || '-')
 
-const ipAddress = computed(() => (pif.value?.ip ? pif.value.ip : '-'))
-
-const ipV6Address = computed(() => {
-  const ipv6 = pif.value?.ipv6?.filter(ip => ip.trim() !== '') || []
-  return ipv6.length > 0 ? ipv6 : []
-})
+// const ipAddress = computed(() => (pif.value?.ip ? pif.value.ip : '-'))
+//
+// const ipV6Address = computed(() => {
+//   const ipv6 = pif.value?.ipv6?.filter(ip => ip.trim() !== '') || []
+//   return ipv6.length > 0 ? ipv6 : []
+// })
 
 const networkNbd = computed(() => (network.value?.nbd ? t('on') : t('off')))
 
